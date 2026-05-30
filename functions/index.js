@@ -9,7 +9,8 @@ const app = express();
 
 const allowedOrigins = [
   "http://localhost:3000",
-  `https://${process.env.GCLOUD_PROJECT || "your-project-id"}.web.app`,
+  "https://nexis-ruby.vercel.app",
+  `https://${process.env.GCLOUD_PROJECT}.web.app`,
 ];
 
 app.use(cors({ origin: allowedOrigins }));

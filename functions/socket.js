@@ -153,12 +153,15 @@ async function handleLeave(socket, roomId, io) {
  * Attach a Socket.IO server to the given HTTP server.
  */
 function attachSocketServer(server) {
+  const allowedOrigins = [
+    "http://localhost:3000",
+    "https://nexis-ruby.vercel.app",
+    `https://${process.env.GCLOUD_PROJECT || "ephemeral-chat-90969"}.web.app`,
+  ];
+
   const io = new Server(server, {
     cors: {
-      origin: [
-        "http://localhost:3000",
-        `https://${process.env.GCLOUD_PROJECT || "your-project-id"}.web.app`,
-      ],
+      origin: allowedOrigins,
       methods: ["GET", "POST"],
     },
     transports: ["websocket"],
