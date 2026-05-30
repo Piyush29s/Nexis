@@ -1,8 +1,18 @@
 const admin = require("firebase-admin");
 
-admin.initializeApp({
-  projectId: process.env.GCLOUD_PROJECT || "ephemeral-chat-90969",
-});
+if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
+  const serviceAccount = JSON.parse(
+    process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON
+  );
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    projectId: serviceAccount.project_id,
+  });
+} else {
+  admin.initializeApp({
+    projectId: process.env.GCLOUD_PROJECT || "ephemeral-chat-90969",
+  });
+}
 
 const db = admin.firestore();
 
