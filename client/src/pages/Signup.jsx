@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import { Eye, EyeOff, Check, X, Loader2 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import UsernameModal from "../components/UsernameModal";
 
 /* ── Error messages ────────────────────────────────────────────── */
 function getSignupErrorMessage(code) {
@@ -82,7 +83,7 @@ function GitHubIcon() {
 }
 
 export default function Signup() {
-  const { signup, checkUsernameAvailable } = useAuth();
+  const { signup, checkUsernameAvailable, googleSignIn, githubSignIn, checkUserExists } = useAuth();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
@@ -93,6 +94,7 @@ export default function Signup() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [oauthUser, setOauthUser] = useState(null);
 
   // Username availability state
   const [usernameStatus, setUsernameStatus] = useState("idle"); // idle | checking | available | taken | invalid
@@ -165,7 +167,7 @@ export default function Signup() {
     try {
       setLoading(true);
       await signup(email.trim(), password, username);
-      navigate("/lobby");
+      navigate("/verify-email");
     } catch (err) {
       setError(getSignupErrorMessage(err.code));
     } finally {
@@ -173,8 +175,39 @@ export default function Signup() {
     }
   }
 
+  async function handleOAuth(providerSignIn) {
+    try {
+      setLoading(true);
+      setError("");
+      const result = await providerSignIn();
+      const userDocExists = await checkUserExists(result.user.uid);
+      if (userDocExists) {
+        navigate("/lobby");
+      } else {
+        setOauthUser(result.user);
+      }
+    } catch (err) {
+      if (err.code === "auth/popup-closed-by-user") {
+        setError("Sign-in cancelled.");
+      } else if (err.code === "auth/account-exists-with-different-credential" || err.code === "auth/email-already-in-use") {
+        setError("This email is already registered. Please log in with your password.");
+      } else {
+        setError("OAuth sign-in failed. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="min-h-screen flex bg-black">
+      {oauthUser && (
+        <UsernameModal
+          uid={oauthUser.uid}
+          email={oauthUser.email}
+          onComplete={() => navigate("/lobby")}
+        />
+      )}
       {/* ── Left Column — Video ──────────────────────────────────── */}
       <div className="hidden lg:block w-[52%] relative rounded-3xl overflow-hidden shadow-2xl m-3">
         <video
@@ -223,8 +256,8 @@ export default function Signup() {
 
           {/* Social buttons */}
           <motion.div variants={fadeUp} className="grid grid-cols-2 gap-3 mb-6">
-            <button type="button" className="liquid-glass rounded-xl h-11 flex items-center justify-center gap-2 text-white/60 text-sm hover:bg-white/5 transition-colors"><GoogleIcon /><span>Google</span></button>
-            <button type="button" className="liquid-glass rounded-xl h-11 flex items-center justify-center gap-2 text-white/60 text-sm hover:bg-white/5 transition-colors"><GitHubIcon /><span>GitHub</span></button>
+            <button type="button" onClick={() => handleOAuth(googleSignIn)} disabled={loading} className="liquid-glass rounded-xl h-11 flex items-center justify-center gap-2 text-white/60 text-sm hover:bg-white/5 transition-colors disabled:opacity-50"><GoogleIcon /><span>Google</span></button>
+            <button type="button" onClick={() => handleOAuth(githubSignIn)} disabled={loading} className="liquid-glass rounded-xl h-11 flex items-center justify-center gap-2 text-white/60 text-sm hover:bg-white/5 transition-colors disabled:opacity-50"><GitHubIcon /><span>GitHub</span></button>
           </motion.div>
 
           {/* Divider */}

@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import UsernameModal from "../components/UsernameModal";
 
 /* ── Error messages ────────────────────────────────────────────── */
 function getLoginErrorMessage(code) {
@@ -56,7 +57,7 @@ function GitHubIcon() {
 }
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, googleSignIn, githubSignIn, checkUserExists } = useAuth();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
@@ -64,6 +65,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [oauthUser, setOauthUser] = useState(null);
 
   const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -90,8 +92,39 @@ export default function Login() {
     }
   }
 
+  async function handleOAuth(providerSignIn) {
+    try {
+      setLoading(true);
+      setError("");
+      const result = await providerSignIn();
+      const userDocExists = await checkUserExists(result.user.uid);
+      if (userDocExists) {
+        navigate("/lobby");
+      } else {
+        setOauthUser(result.user);
+      }
+    } catch (err) {
+      if (err.code === "auth/popup-closed-by-user") {
+        setError("Sign-in cancelled.");
+      } else if (err.code === "auth/account-exists-with-different-credential" || err.code === "auth/email-already-in-use") {
+        setError("This email is already registered. Please log in with your password.");
+      } else {
+        setError("OAuth sign-in failed. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="min-h-screen flex bg-black">
+      {oauthUser && (
+        <UsernameModal
+          uid={oauthUser.uid}
+          email={oauthUser.email}
+          onComplete={() => navigate("/lobby")}
+        />
+      )}
       {/* ── Left Column — Video ──────────────────────────────────── */}
       <div className="hidden lg:block w-[52%] relative rounded-3xl overflow-hidden shadow-2xl m-3">
         <video
@@ -181,14 +214,18 @@ export default function Login() {
           <motion.div variants={fadeUp} className="grid grid-cols-2 gap-3 mb-6">
             <button
               type="button"
-              className="liquid-glass rounded-xl h-11 flex items-center justify-center gap-2 text-white/60 text-sm hover:bg-white/5 transition-colors"
+              onClick={() => handleOAuth(googleSignIn)}
+              disabled={loading}
+              className="liquid-glass rounded-xl h-11 flex items-center justify-center gap-2 text-white/60 text-sm hover:bg-white/5 transition-colors disabled:opacity-50"
             >
               <GoogleIcon />
               <span>Google</span>
             </button>
             <button
               type="button"
-              className="liquid-glass rounded-xl h-11 flex items-center justify-center gap-2 text-white/60 text-sm hover:bg-white/5 transition-colors"
+              onClick={() => handleOAuth(githubSignIn)}
+              disabled={loading}
+              className="liquid-glass rounded-xl h-11 flex items-center justify-center gap-2 text-white/60 text-sm hover:bg-white/5 transition-colors disabled:opacity-50"
             >
               <GitHubIcon />
               <span>GitHub</span>

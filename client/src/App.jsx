@@ -5,6 +5,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import VerifyEmail from "./pages/VerifyEmail";
 import Lobby from "./pages/Lobby";
 import Chat from "./pages/Chat";
 
@@ -16,6 +17,7 @@ export default function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/lobby" element={<Lobby />} />
             <Route path="/chat/:roomId" element={<Chat />} />

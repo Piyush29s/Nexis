@@ -4,6 +4,10 @@ import {
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
+  sendEmailVerification,
+  GoogleAuthProvider,
+  GithubAuthProvider,
+  signInWithPopup
 } from "firebase/auth";
 import { auth, firestore, doc, getDoc, writeBatch, serverTimestamp } from "../services/firebase";
 
@@ -29,6 +33,10 @@ export function useAuth() {
  * - login(email, password): sign in with email/password
  * - logout(): sign out
  * - checkUsernameAvailable(username): check if a username is taken
+ * - googleSignIn(): sign in with Google
+ * - githubSignIn(): sign in with GitHub
+ * - checkUserExists(uid): check if a user document exists in Firestore
+ * - completeOAuthSignup(uid, email, username): complete profile creation for OAuth users
  */
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -127,8 +135,44 @@ export function AuthProvider({ children }) {
       console.warn("Firestore batch write failed. User account was created but profile may be incomplete.");
     }
 
+    try {
+      await sendEmailVerification(result.user);
+    } catch (err) {
+      console.error("Failed to send verification email:", err);
+    }
+
     setUsername(usernameValue);
     return result;
+  }
+
+  async function googleSignIn() {
+    const provider = new GoogleAuthProvider();
+    return signInWithPopup(auth, provider);
+  }
+
+  async function githubSignIn() {
+    const provider = new GithubAuthProvider();
+    return signInWithPopup(auth, provider);
+  }
+
+  async function checkUserExists(uid) {
+    const docSnap = await getDoc(doc(firestore, "users", uid));
+    return docSnap.exists();
+  }
+
+  async function completeOAuthSignup(uid, email, usernameValue) {
+    const lowerUsername = usernameValue.toLowerCase();
+    const batch = writeBatch(firestore);
+    batch.set(doc(firestore, "users", uid), {
+      username: usernameValue,
+      createdAt: serverTimestamp(),
+    });
+    batch.set(doc(firestore, "usernames", lowerUsername), {
+      userId: uid,
+      createdAt: serverTimestamp(),
+    });
+    await batch.commit();
+    setUsername(usernameValue);
   }
 
   async function login(email, password) {
@@ -140,7 +184,19 @@ export function AuthProvider({ children }) {
     return signOut(auth);
   }
 
-  const value = { user, username, loading, signup, login, logout, checkUsernameAvailable };
+  const value = { 
+    user, 
+    username, 
+    loading, 
+    signup, 
+    login, 
+    logout, 
+    checkUsernameAvailable,
+    googleSignIn,
+    githubSignIn,
+    checkUserExists,
+    completeOAuthSignup
+  };
 
   return (
     <AuthContext.Provider value={value}>

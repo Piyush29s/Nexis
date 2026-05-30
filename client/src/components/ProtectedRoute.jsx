@@ -22,5 +22,9 @@ export default function ProtectedRoute() {
     return <Navigate to="/login" replace />;
   }
 
+  if (!user.emailVerified) {
+    return <Navigate to="/verify-email" replace />;
+  }
+
   return <Outlet />;
 }
