@@ -3,6 +3,9 @@ const express = require("express");
 const cors = require("cors");
 const { createServer } = require("http");
 const { attachSocketServer } = require("./socket");
+const crypto = require("crypto");
+const { admin, getUsernameByUid, saveVerificationToken, getVerificationToken, markEmailVerified } = require("./firestore");
+const { sendVerificationEmail } = require("./email");
 
 // ─── Express App ──────────────────────────────────────────────────
 const app = express();
@@ -28,6 +31,64 @@ app.use((req, res, next) => {
 
 app.get("/", (_req, res) => {
   res.json({ status: "Chatroom API is running" });
+});
+
+// ─── Email Verification Routes ────────────────────────────────────
+
+app.post("/send-verification", async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    const tokenStr = authHeader.split("Bearer ")[1];
+    const decodedToken = await admin.auth().verifyIdToken(tokenStr);
+    const uid = decodedToken.uid;
+    const email = decodedToken.email;
+
+    const username = await getUsernameByUid(uid) || "User";
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = Date.now() + 86400000; // 24 hours
+
+    await saveVerificationToken(uid, token, expiresAt);
+
+    const backendUrl = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 5001}`;
+    const url = `${backendUrl}/verify-email?token=${token}&uid=${uid}`;
+
+    await sendVerificationEmail(email, username, url);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Failed to send verification:", error);
+    res.status(500).json({ error: "Failed to send verification email" });
+  }
+});
+
+app.get("/verify-email", async (req, res) => {
+  try {
+    const { token, uid } = req.query;
+    const clientUrl = process.env.CLIENT_URL || "http://localhost:3000";
+
+    if (!token || !uid) {
+      return res.redirect(`${clientUrl}/verify-email?error=invalid`);
+    }
+
+    const verification = await getVerificationToken(uid);
+    if (!verification) {
+      return res.redirect(`${clientUrl}/verify-email?error=invalid`);
+    }
+
+    if (verification.token !== token || verification.used || Date.now() > verification.expiresAt) {
+      return res.redirect(`${clientUrl}/verify-email?error=invalid`);
+    }
+
+    await markEmailVerified(uid);
+    return res.redirect(`${clientUrl}/verify-email?verified=true`);
+  } catch (error) {
+    console.error("Failed to verify email:", error);
+    const clientUrl = process.env.CLIENT_URL || "http://localhost:3000";
+    res.redirect(`${clientUrl}/verify-email?error=invalid`);
+  }
 });
 
 // ─── HTTP Server + Socket.IO ──────────────────────────────────────

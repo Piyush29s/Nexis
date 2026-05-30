@@ -1,19 +1,33 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, Navigate } from "react-router-dom";
+import { useNavigate, Navigate, useSearchParams } from "react-router-dom";
 import { motion } from "motion/react";
 import { Mail, RefreshCw, CheckCircle, LogOut } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { sendEmailVerification } from "firebase/auth";
+import { checkEmailVerified } from "../services/api";
 
 export default function VerifyEmail() {
-  const { user, logout, loading } = useAuth();
+  const { user, emailVerified, logout, loading, resendVerificationEmail } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   
   const [resendDisabled, setResendDisabled] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [checking, setChecking] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [isSuccessDelay, setIsSuccessDelay] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("verified") === "true") {
+      setMessage("Email verified successfully! Redirecting...");
+      setIsSuccessDelay(true);
+      setTimeout(() => {
+        navigate("/lobby", { replace: true });
+      }, 2000);
+    } else if (searchParams.get("error") === "invalid") {
+      setError("Link expired or invalid. Please request a new one.");
+    }
+  }, [searchParams, navigate]);
 
   useEffect(() => {
     let timer;
@@ -34,8 +48,8 @@ export default function VerifyEmail() {
     return <Navigate to="/login" replace />;
   }
 
-  // If already verified, go to lobby
-  if (user.emailVerified) {
+  // If already verified and not currently delaying success redirect, go to lobby
+  if (emailVerified && !isSuccessDelay) {
     return <Navigate to="/lobby" replace />;
   }
 
@@ -45,7 +59,7 @@ export default function VerifyEmail() {
       setCountdown(60);
       setMessage("");
       setError("");
-      await sendEmailVerification(user);
+      await resendVerificationEmail();
       setMessage("Verification email sent!");
     } catch (err) {
       console.error(err);
@@ -60,9 +74,8 @@ export default function VerifyEmail() {
       setChecking(true);
       setMessage("");
       setError("");
-      // Reload user to get latest emailVerified status from Firebase
-      await user.reload();
-      if (user.emailVerified) {
+      const isVerified = await checkEmailVerified(user.uid);
+      if (isVerified) {
         navigate("/lobby");
       } else {
         setError("Email is not verified yet. Please check your inbox.");

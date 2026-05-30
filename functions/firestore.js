@@ -98,4 +98,64 @@ async function getUsernameByUid(uid) {
   }
 }
 
-module.exports = { admin, db, saveMessage, deleteMessage, upsertRoom, deleteRoom, getUsernameByUid };
+/**
+ * Fetch full user document by UID
+ */
+async function getUserByUid(uid) {
+  try {
+    const doc = await db.collection("users").doc(uid).get();
+    if (doc.exists) return doc.data();
+    return null;
+  } catch (err) {
+    console.error(`Failed to fetch user ${uid}:`, err.message);
+    return null;
+  }
+}
+
+/**
+ * Save a verification token for email verification
+ */
+async function saveVerificationToken(uid, token, expiresAt) {
+  await db.collection("emailVerifications").doc(uid).set({
+    token,
+    expiresAt,
+    used: false,
+    createdAt: admin.firestore.FieldValue.serverTimestamp()
+  });
+}
+
+/**
+ * Get the verification token doc
+ */
+async function getVerificationToken(uid) {
+  const doc = await db.collection("emailVerifications").doc(uid).get();
+  return doc.exists ? doc.data() : null;
+}
+
+/**
+ * Mark email as verified using a batch write
+ */
+async function markEmailVerified(uid) {
+  const batch = db.batch();
+  const userRef = db.collection("users").doc(uid);
+  const tokenRef = db.collection("emailVerifications").doc(uid);
+
+  batch.update(userRef, { emailVerified: true });
+  batch.update(tokenRef, { used: true });
+
+  await batch.commit();
+}
+
+module.exports = { 
+  admin, 
+  db, 
+  saveMessage, 
+  deleteMessage, 
+  upsertRoom, 
+  deleteRoom, 
+  getUsernameByUid,
+  getUserByUid,
+  saveVerificationToken,
+  getVerificationToken,
+  markEmailVerified
+};

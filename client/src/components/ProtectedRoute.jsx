@@ -7,7 +7,7 @@ import { useAuth } from "../context/AuthContext";
  * Shows a loading screen while the initial auth state is being determined.
  */
 export default function ProtectedRoute() {
-  const { user, loading } = useAuth();
+  const { user, emailVerified, loading } = useAuth();
 
   if (loading) {
     return (
@@ -22,7 +22,7 @@ export default function ProtectedRoute() {
     return <Navigate to="/login" replace />;
   }
 
-  if (!user.emailVerified) {
+  if (!emailVerified) {
     return <Navigate to="/verify-email" replace />;
   }
 

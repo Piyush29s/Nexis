@@ -4,12 +4,13 @@ import {
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
-  sendEmailVerification,
   GoogleAuthProvider,
   GithubAuthProvider,
   signInWithPopup
 } from "firebase/auth";
+import { onSnapshot } from "firebase/firestore";
 import { auth, firestore, doc, getDoc, writeBatch, serverTimestamp } from "../services/firebase";
+import { sendVerificationEmail } from "../services/api";
 
 const AuthContext = createContext(null);
 
@@ -41,6 +42,7 @@ export function useAuth() {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [username, setUsername] = useState(null);
+  const [emailVerified, setEmailVerified] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -58,11 +60,26 @@ export function AuthProvider({ children }) {
         }
       } else {
         setUsername(null);
+        setEmailVerified(false);
       }
       setLoading(false);
     });
     return unsubscribe;
   }, []);
+
+  useEffect(() => {
+    let unsubscribe = () => {};
+    if (user) {
+      unsubscribe = onSnapshot(doc(firestore, "users", user.uid), (docSnap) => {
+        if (docSnap.exists() && docSnap.data().emailVerified) {
+          setEmailVerified(true);
+        } else {
+          setEmailVerified(false);
+        }
+      });
+    }
+    return () => unsubscribe();
+  }, [user]);
 
   /**
    * Check if a username is available.
@@ -136,9 +153,10 @@ export function AuthProvider({ children }) {
     }
 
     try {
-      await sendEmailVerification(result.user);
+      const idToken = await result.user.getIdToken();
+      await sendVerificationEmail(idToken);
     } catch (err) {
-      console.error("Failed to send verification email:", err);
+      console.error("Failed to send verification email via API:", err);
     }
 
     setUsername(usernameValue);
@@ -181,12 +199,21 @@ export function AuthProvider({ children }) {
 
   async function logout() {
     setUsername(null);
+    setEmailVerified(false);
     return signOut(auth);
+  }
+
+  async function resendVerificationEmail() {
+    if (user) {
+      const idToken = await user.getIdToken();
+      await sendVerificationEmail(idToken);
+    }
   }
 
   const value = { 
     user, 
-    username, 
+    username,
+    emailVerified,
     loading, 
     signup, 
     login, 
@@ -195,7 +222,8 @@ export function AuthProvider({ children }) {
     googleSignIn,
     githubSignIn,
     checkUserExists,
-    completeOAuthSignup
+    completeOAuthSignup,
+    resendVerificationEmail
   };
 
   return (
