@@ -4,10 +4,9 @@ const cors = require("cors");
 const { createServer } = require("http");
 const { attachSocketServer } = require("./socket");
 const crypto = require("crypto");
-const { admin, getUsernameByUid, saveVerificationToken, getVerificationToken, markEmailVerified } = require("./firestore");
+const { admin, getUserByUid, saveVerificationToken, getVerificationToken, markEmailVerified } = require("./firestore");
 const { sendVerificationEmail } = require("./email");
 
-// ─── Express App ──────────────────────────────────────────────────
 const app = express();
 
 const allowedOrigins = [
@@ -19,7 +18,6 @@ const allowedOrigins = [
 app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
 
-// ─── Security Headers ────────────────────────────────────────────
 app.use((req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
@@ -33,8 +31,6 @@ app.get("/", (_req, res) => {
   res.json({ status: "Chatroom API is running" });
 });
 
-// ─── Email Verification Routes ────────────────────────────────────
-
 app.post("/send-verification", async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -46,9 +42,11 @@ app.post("/send-verification", async (req, res) => {
     const uid = decodedToken.uid;
     const email = decodedToken.email;
 
-    const username = await getUsernameByUid(uid) || "User";
+    const userDoc = await getUserByUid(uid);
+    const username = (userDoc && userDoc.username) ? userDoc.username : "User";
+
     const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = Date.now() + 86400000; // 24 hours
+    const expiresAt = Date.now() + 86400000;
 
     await saveVerificationToken(uid, token, expiresAt);
 
@@ -91,11 +89,9 @@ app.get("/verify-email", async (req, res) => {
   }
 });
 
-// ─── HTTP Server + Socket.IO ──────────────────────────────────────
 const server = createServer(app);
 attachSocketServer(server);
 
-// Start standalone server for local development.
 if (!process.env.FUNCTION_TARGET) {
   const PORT = process.env.PORT || 5001;
   server.listen(PORT, () => {
@@ -103,5 +99,4 @@ if (!process.env.FUNCTION_TARGET) {
   });
 }
 
-// ─── Firebase Cloud Function Export ───────────────────────────────
 exports.api = functions.https.onRequest(app);
