@@ -126,9 +126,9 @@ export default function Lobby() {
 
   /* ── Render ──────────────────────────────────────────────────── */
   return (
-    <div className="min-h-screen bg-black bg-[radial-gradient(ellipse_at_top,_rgba(255,255,255,0.03)_0%,_transparent_70%)] flex flex-col">
+    <div className="min-h-dvh bg-black bg-[radial-gradient(ellipse_at_top,_rgba(255,255,255,0.03)_0%,_transparent_70%)] flex flex-col overflow-x-hidden">
       {/* ── Header ─────────────────────────────────────────────── */}
-      <header className="flex items-center justify-between px-6 py-4 relative z-10">
+      <header className="flex items-center justify-between px-4 sm:px-6 py-4 relative z-10">
         <Link to="/" className="flex items-center gap-2.5 no-underline">
           <img src="/Nexis_logo.jpg" alt="Nexis" className="w-7 h-7 rounded-full object-cover" />
           <span className="text-white text-sm font-medium tracking-wide">Nexis</span>
@@ -136,7 +136,7 @@ export default function Lobby() {
         </Link>
         <div className="flex items-center gap-4">
           {username && <span className="text-white/40 text-xs hidden sm:block">@{username}</span>}
-          <button id="lobby-sign-out" onClick={handleSignOut} className="flex items-center gap-2 text-white/30 text-xs hover:text-white/60 transition-colors">
+          <button id="lobby-sign-out" onClick={handleSignOut} className="flex items-center gap-2 text-white/30 text-xs hover:text-white/60 transition-colors min-h-[44px] px-2">
             <LogOut size={14} />
             <span className="hidden sm:inline">Sign Out</span>
           </button>
@@ -144,14 +144,14 @@ export default function Lobby() {
       </header>
 
       {/* ── Main Content ───────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 pb-16">
+      <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 pb-8 sm:pb-16">
         <motion.div
           className="w-full max-w-2xl"
           initial="hidden" animate="visible"
           variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.12, delayChildren: 0.15 } } }}
         >
           <motion.div variants={fadeUp} className="text-center mb-10">
-            <h1 className="text-4xl md:text-5xl text-white font-['Instrument_Serif'] tracking-tight mb-3">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl text-white font-['Instrument_Serif'] tracking-tight mb-3">
               Secure <em className="italic">Rooms</em>
             </h1>
             <p className="text-white/30 text-sm max-w-md mx-auto">
@@ -165,7 +165,8 @@ export default function Lobby() {
 
           <div className="grid md:grid-cols-2 gap-5">
             {/* ── Create Room Card ────────────────────────────────── */}
-            <motion.div variants={fadeUp} className="liquid-glass rounded-3xl p-7">
+            <motion.div variants={fadeUp} className="liquid-glass rounded-3xl p-5 sm:p-7"
+>
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center text-white/40"><Plus size={18} /></div>
                 <h2 className="text-white text-lg font-['Instrument_Serif']">Create New Room</h2>
@@ -173,7 +174,7 @@ export default function Lobby() {
               <p className="text-white/30 text-sm mb-6 leading-relaxed">Generate a secure room for two people. Share the code with your contact.</p>
 
               {!createdRoomId ? (
-                <button id="create-room-button" onClick={handleCreateRoom} disabled={creating || !socketReady} className="w-full h-12 bg-white text-black font-semibold rounded-xl hover:bg-white/90 active:scale-[0.98] transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center">
+                <button id="create-room-button" onClick={handleCreateRoom} disabled={creating || !socketReady} className="w-full min-h-[44px] bg-white text-black font-semibold rounded-xl hover:bg-white/90 active:scale-[0.98] transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center">
                   {creating ? <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" /> : "Create Room"}
                 </button>
               ) : (
@@ -181,22 +182,23 @@ export default function Lobby() {
                   <p className="text-white/30 text-xs uppercase tracking-widest mb-4">Your Room Code</p>
                   <div className="flex justify-center gap-2 mb-4">
                     {createdRoomId.split("").map((char, i) => (
-                      <motion.span key={i} initial={{ opacity: 0, y: 12, scale: 0.8 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ delay: i * 0.06, type: "spring", stiffness: 400, damping: 20 }} className="w-11 h-14 rounded-lg bg-[#1A1A1A] flex items-center justify-center text-white text-xl font-mono font-bold tracking-widest">{char}</motion.span>
+                      <motion.span key={i} initial={{ opacity: 0, y: 12, scale: 0.8 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ delay: i * 0.06, type: "spring", stiffness: 400, damping: 20 }} >{char}</motion.span>
                     ))}
-                  </div>
+                  </div>className="w-9 h-12 sm:w-11 sm:h-14 rounded-lg bg-[#1A1A1A] flex items-center justify-center text-white text-lg sm:text-xl font-mono font-bold"
                   <p className="text-white/20 text-xs mb-5">Share this code with one other person</p>
                   <div className="flex gap-3">
-                    <button id="copy-code-button" onClick={handleCopyCode} className="flex-1 h-11 rounded-xl flex items-center justify-center gap-2 text-white/50 text-sm hover:bg-white/5 transition-colors liquid-glass">
+                    <button id="copy-code-button" onClick={handleCopyCode} className="flex-1 min-h-[44px] rounded-xl flex items-center justify-center gap-2 text-white/50 text-sm hover:bg-white/5 transition-colors liquid-glass">
                       {copied ? <><Check size={15} />Copied</> : <><Copy size={15} />Copy Code</>}
                     </button>
-                    <button id="enter-room-button" onClick={handleEnterCreatedRoom} className="flex-1 h-11 bg-white text-black font-semibold rounded-xl hover:bg-white/90 active:scale-[0.98] transition-all text-sm">Enter Room →</button>
+                    <button id="enter-room-button" onClick={handleEnterCreatedRoom} className="flex-1 min-h-[44px] bg-white text-black font-semibold rounded-xl hover:bg-white/90 active:scale-[0.98] transition-all text-sm">Enter Room →</button>
                   </div>
                 </motion.div>
               )}
             </motion.div>
 
             {/* ── Join Room Card ──────────────────────────────────── */}
-            <motion.div variants={fadeUp} className="liquid-glass rounded-3xl p-7">
+            <motion.div variants={fadeUp} className="liquid-glass rounded-3xl p-5 sm:p-7"
+>
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center text-white/40"><LogIn size={18} /></div>
                 <h2 className="text-white text-lg font-['Instrument_Serif']">Join Existing Room</h2>
@@ -204,8 +206,8 @@ export default function Lobby() {
               <p className="text-white/30 text-sm mb-6 leading-relaxed">Enter a room code shared by another person to join their secure channel.</p>
 
               <form onSubmit={handleJoinRoom} className="space-y-3">
-                <input id="join-room-input" type="text" placeholder="ROOM CODE" value={joinRoomCode} onChange={(e) => setJoinRoomCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))} maxLength={6} autoComplete="off" spellCheck={false} className="w-full bg-[#1A1A1A] border-none rounded-xl h-12 px-4 text-white text-center text-lg font-mono font-bold tracking-[0.25em] placeholder:text-white/15 placeholder:text-sm placeholder:font-normal placeholder:tracking-widest focus:ring-2 focus:ring-white/20 focus:outline-none transition-shadow uppercase" />
-                <button id="join-room-button" type="submit" disabled={joinRoomCode.trim().length !== 6} className="w-full h-12 bg-white text-black font-semibold rounded-xl hover:bg-white/90 active:scale-[0.98] transition-all disabled:opacity-30 disabled:cursor-not-allowed">Join Room</button>
+                <input id="join-room-input" type="text" placeholder="ROOM CODE" value={joinRoomCode} onChange={(e) => setJoinRoomCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))} maxLength={6} autoComplete="off" spellCheck={false} className="w-full bg-[#1A1A1A] border-none rounded-xl min-h-[44px] px-4 text-white text-center text-lg font-mono font-bold tracking-[0.25em] placeholder:text-white/15 placeholder:text-sm placeholder:font-normal placeholder:tracking-widest focus:ring-2 focus:ring-white/20 focus:outline-none transition-shadow uppercase" />
+                <button id="join-room-button" type="submit" disabled={joinRoomCode.trim().length !== 6} className="w-full min-h-[44px] bg-white text-black font-semibold rounded-xl hover:bg-white/90 active:scale-[0.98] transition-all disabled:opacity-30 disabled:cursor-not-allowed">Join Room</button>
               </form>
             </motion.div>
           </div>

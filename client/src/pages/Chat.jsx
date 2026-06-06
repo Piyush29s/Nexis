@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
-import { ArrowLeft, Send, Lock } from "lucide-react";
+import { ArrowLeft, Send, Lock, UserX } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { connectSocket, disconnectSocket } from "../services/socket";
 import {
@@ -140,7 +140,7 @@ export default function Chat() {
         socket.on("partner_left", ({ userId, username }) => {
           if (!mounted) return;
           setPartner(null);
-          setStatus("waiting");
+          setStatus("partner_left");
           // Reset encryption — partner left
           setEncrypted(false);
           setKeyExchanging(false);
@@ -279,25 +279,26 @@ export default function Chat() {
   function getStatusDotClass() {
     if (status === "active") return "bg-emerald-400";
     if (status === "waiting" || status === "connecting") return "bg-amber-400 animate-pulse";
+    if (status === "partner_left") return "bg-red-400";
     return "bg-red-400";
   }
 
   const canSend = status === "active" && encrypted && inputValue.trim().length > 0 && inputValue.trim().length <= MAX_MESSAGE_LENGTH;
 
   return (
-    <div className="flex flex-col h-screen bg-black">
+    <div className="flex flex-col bg-black overflow-x-hidden" style={{ height: '100dvh' }}>
       {/* ── Header ────────────────────────────────────────────────── */}
-      <header className="flex items-center justify-between px-5 py-3.5 bg-[#111111] border-b border-white/5">
-        <div className="flex items-center gap-3">
-          <button onClick={handleBackToLobby} title="Back to lobby" className="w-9 h-9 rounded-xl flex items-center justify-center text-white/40 hover:text-white hover:bg-white/5 transition-all">
+      <header className="flex items-center justify-between px-3 sm:px-5 py-3 sm:py-3.5 bg-[#111111] border-b border-white/5 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 overflow-hidden">
+          <button onClick={handleBackToLobby} title="Back to lobby" className="w-11 h-11 rounded-xl flex items-center justify-center text-white/40 hover:text-white hover:bg-white/5 transition-all shrink-0">
             <ArrowLeft size={18} />
           </button>
           <Link to="/" className="flex items-center gap-2 no-underline">
             <img src="/Nexis_logo.jpg" alt="Nexis" className="w-6 h-6 rounded-full object-cover" />
             <h1 className="text-white text-base font-['Instrument_Serif']">Nexis</h1>
           </Link>
-          <span className="liquid-glass rounded-full px-3 py-1 text-white/50 text-xs tracking-widest">{roomId}</span>
-          <div className={`w-2 h-2 rounded-full ${getStatusDotClass()}`} />
+          <span className="liquid-glass rounded-full px-2.5 sm:px-3 py-1 text-white/50 text-[10px] sm:text-xs tracking-widest shrink-0 max-w-[80px] truncate">{roomId}</span>
+          <div className={`w-2 h-2 rounded-full shrink-0 ${getStatusDotClass()}`} />
           {encrypted && (
             <div className="flex items-center gap-1 text-emerald-400" title="End-to-end encrypted">
               <Lock size={12} />
@@ -358,6 +359,24 @@ export default function Chat() {
         </div>
       )}
 
+      {/* ── Partner Left Screen ──────────────────────────────────── */}
+      {status === "partner_left" && messages.length > 0 && (
+        <div className="px-4 py-3 bg-red-500/5 border-t border-red-500/10 flex items-center justify-between gap-3 sticky bottom-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <UserX size={14} className="text-red-400 shrink-0" />
+            <span className="text-red-400/80 text-xs truncate">Your partner has left</span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => navigate("/lobby")}
+              className="text-white text-xs bg-white/10 hover:bg-white/15 rounded-lg px-3 min-h-[36px] transition-colors"
+            >
+              New Session
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── Key Exchange Status ──────────────────────────────────── */}
       {status === "active" && keyExchanging && !encrypted && messages.length === 0 && (
         <div className="flex-1 flex flex-col items-center justify-center gap-5 px-6">
@@ -368,8 +387,8 @@ export default function Chat() {
       )}
 
       {/* ── Messages Area ─────────────────────────────────────────── */}
-      {(encrypted || messages.length > 0) && (status === "active" || messages.length > 0) && (
-        <div className="flex-1 overflow-y-auto px-4 py-5 space-y-3">
+      {(encrypted || messages.length > 0) && (status === "active" || status === "partner_left" || messages.length > 0) && (
+        <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 sm:py-5 space-y-3">
           <AnimatePresence>
             {messages.map((msg) => {
               if (msg.type === "system") {
@@ -390,8 +409,8 @@ export default function Chat() {
                 <motion.div key={msg.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
                   {isOwn ? (
                     <div className="flex justify-end">
-                      <div className="bg-white text-black rounded-2xl rounded-br-sm px-4 py-2.5 max-w-[75%] relative">
-                        <p className="text-sm leading-relaxed">{msg.message}</p>
+                      <div className="bg-white text-black rounded-2xl rounded-br-sm px-3 sm:px-4 py-2.5 max-w-[80%] sm:max-w-[75%] relative break-words overflow-hidden">
+                        <p className="text-sm leading-relaxed break-words">{msg.message}</p>
                         <div className="flex items-center justify-end gap-2 mt-1.5">
                           <span className="text-black/30 text-[10px]">{formatTime(msg.createdAt)}</span>
                           <span className="text-black/20 text-[10px] tabular-nums">{remaining > 0 ? formatCountdown(remaining) : "Expiring…"}</span>
@@ -403,9 +422,9 @@ export default function Chat() {
                     </div>
                   ) : (
                     <div className="flex justify-start">
-                      <div className="bg-[#1A1A1A] text-white rounded-2xl rounded-bl-sm px-4 py-2.5 max-w-[75%] relative">
+                      <div className="bg-[#1A1A1A] text-white rounded-2xl rounded-bl-sm px-3 sm:px-4 py-2.5 max-w-[80%] sm:max-w-[75%] relative break-words overflow-hidden">
                         <p className="text-white/30 text-[10px] mb-1">@{msg.username}</p>
-                        <p className="text-sm leading-relaxed">{msg.message}</p>
+                        <p className="text-sm leading-relaxed break-words">{msg.message}</p>
                         <div className="flex items-center justify-end gap-2 mt-1.5">
                           <span className="text-white/20 text-[10px]">{formatTime(msg.createdAt)}</span>
                           <span className="text-white/15 text-[10px] tabular-nums">{remaining > 0 ? formatCountdown(remaining) : "Expiring…"}</span>
@@ -424,8 +443,20 @@ export default function Chat() {
         </div>
       )}
 
+      {/* ── Partner Left Banner (when messages exist) ────────────── */}
+      {status === "partner_left" && messages.length > 0 && (
+        <div className="px-4 py-3 bg-red-500/5 border-t border-red-500/10 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <UserX size={14} className="text-red-400 shrink-0" />
+            <span className="text-red-400/80 text-xs truncate">Your partner has left</span>
+          </div>
+          <button onClick={handleBackToLobby} className="text-white text-xs bg-white/10 hover:bg-white/15 rounded-lg px-3 min-h-[36px] transition-colors shrink-0">Back to Lobby</button>
+        </div>
+      )}
+
       {/* ── Input Area ────────────────────────────────────────────── */}
-      <div className="px-4 py-3 bg-[#111111] border-t border-white/5">
+      {status !== "partner_left" && (
+      <div className="px-3 sm:px-4 py-3 bg-[#111111] border-t border-white/5 sticky bottom-0 pb-safe">
         <div className="flex items-end gap-2.5">
           <textarea
             ref={textareaRef}
@@ -438,7 +469,7 @@ export default function Chat() {
               }
             }}
             onKeyDown={handleKeyDown}
-            disabled={!encrypted || status !== "active"}
+            disabled={!encrypted || status !== "active" || status === "partner_left"}
             rows={1}
             onInput={(e) => {
               e.target.style.height = "auto";
@@ -470,6 +501,7 @@ export default function Chat() {
           )}
         </div>
       </div>
+      )}
     </div>
   );
 }
