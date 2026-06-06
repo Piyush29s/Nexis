@@ -140,8 +140,8 @@ async function markEmailVerified(uid) {
   const userRef = db.collection("users").doc(uid);
   const tokenRef = db.collection("emailVerifications").doc(uid);
 
-  batch.s(userRef, { emailVerified: true });
-  batch.update(tokenRef, { used: true });
+  batch.set(userRef, { emailVerified: true });
+  batch.set(tokenRef, { used: true });
 
   await batch.commit();
 }
