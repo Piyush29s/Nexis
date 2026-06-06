@@ -19,11 +19,8 @@ export default function VerifyEmail() {
 
   useEffect(() => {
     if (searchParams.get("verified") === "true") {
-      setMessage("Email verified successfully! Redirecting...");
+      setMessage("Email verified successfully!");
       setIsSuccessDelay(true);
-      setTimeout(() => {
-        navigate("/lobby", { replace: true });
-      }, 2000);
     } else if (searchParams.get("error") === "invalid") {
       setError("Link expired or invalid. Please request a new one.");
     }
@@ -121,6 +118,19 @@ export default function VerifyEmail() {
           <div className="w-full p-3 mb-6 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs">
             {message}
           </div>
+        )}
+
+        {isSuccessDelay && (
+          <motion.button
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            onClick={() => navigate("/lobby", { replace: true })}
+            className="w-full h-12 bg-white text-black text-sm font-medium rounded-xl hover:bg-white/90 transition-colors flex items-center justify-center gap-2"
+          >
+            <CheckCircle size={16} />
+            Enter Nexis
+          </motion.button>
         )}
 
         {error && (
